@@ -1,5 +1,5 @@
 [package]
-name = "timekeeper-rs"
+name = "timekeeper"
 version = "0.1.1"
 edition = "2024"
 authors = ["HallowsTechLabs hallow.tech.lab@gmail.com"]
