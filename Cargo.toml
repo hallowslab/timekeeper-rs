@@ -1,0 +1,26 @@
+[package]
+name = "timekeeper-rs"
+version = "0.1.0"
+edition = "2024"
+authors = ["HallowsTechLabs hallow.tech.lab@gmail.com"]
+description = "A media file organizer that sorts files using EXIF metadata"
+
+[dependencies]
+chrono = { version = "0.4.41", features = ["serde"] }
+clap = { version = "4.5.45", features = ["derive"] }
+lazy_static = "1.5.0"
+rayon = "1.11.0"
+walkdir = "2.5.0"
+which = "8.0.0"
+
+[features]
+default = []
+bundled = []
+
+# Build optimization for smaller binaries
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Link-time optimization
+codegen-units = 1   # Better optimization
+panic = "abort"     # Smaller binary
+strip = true        # Remove debug symbols
