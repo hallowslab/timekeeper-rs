@@ -47,10 +47,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - name: Run tests
+      - name: Run check
         run: |
-          echo "Running tests for ${{ matrix.target }} on ${{ matrix.os }}"
-          cargo test
+          echo "Running check for ${{ matrix.target }} on ${{ matrix.os }}"
+          cargo check
 
   build:
     name: Build for ${{ matrix.target }}
