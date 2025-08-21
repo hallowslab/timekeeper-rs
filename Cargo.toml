@@ -1,6 +1,6 @@
 [package]
 name = "timekeeper-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["HallowsTechLabs hallow.tech.lab@gmail.com"]
 description = "A media file organizer that sorts files using EXIF metadata"

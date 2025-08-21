@@ -96,21 +96,12 @@ pub fn process_with_exiftool(
         // Create destination directory
         fs::create_dir_all(&dest_dir)?;
 
-        // Move the file
-        if let Err(e) = fs::rename(source_path, &unique_dest_path) {
-            match e.kind() {
-                #[cfg(unix)]
-                std::io::ErrorKind::CrossDeviceLink => {
-                    // TODO: handle cross-device move (rename across filesystems)
-                }
-                _ => return Err(e.into()),
-            }
-        }
+        // Move the file with cross-platform handling
+        move_file_cross_platform(source_path, &unique_dest_path)?;
     }
 
     Ok(())
 }
-
 
 pub fn process_file_with_fallback(
     source_path: &PathBuf,
@@ -147,9 +138,65 @@ pub fn process_file_with_fallback(
         // Create destination directory
         fs::create_dir_all(&dest_dir)?;
         
-        // Move the file
-        fs::rename(source_path, &unique_dest_path)?;
+        // Move the file with cross-platform handling
+        move_file_cross_platform(source_path, &unique_dest_path)?;
     }
+    
+    Ok(())
+}
+
+/// Cross-platform file moving that handles different filesystems
+fn move_file_cross_platform(source: &PathBuf, dest: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    // First try a simple rename (fastest, works within same filesystem)
+    match fs::rename(source, dest) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            // Check if it's a cross-device/filesystem error
+            #[cfg(unix)]
+            {
+                if e.raw_os_error() == Some(18) { // EXDEV - Cross-device link
+                    return copy_and_delete(source, dest);
+                }
+            }
+            
+            #[cfg(windows)]
+            {
+                // On Windows, ERROR_NOT_SAME_DEVICE = 17
+                if e.raw_os_error() == Some(17) {
+                    return copy_and_delete(source, dest);
+                }
+            }
+            
+            // For other platforms or error codes, try copy+delete as fallback
+            match e.kind() {
+                std::io::ErrorKind::InvalidInput | 
+                std::io::ErrorKind::PermissionDenied => {
+                    // These might indicate cross-filesystem issues on some platforms
+                    copy_and_delete(source, dest)
+                }
+                _ => Err(e.into())
+            }
+        }
+    }
+}
+
+/// Copy file and delete original (fallback for cross-filesystem moves)
+fn copy_and_delete(source: &PathBuf, dest: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    // Copy the file
+    fs::copy(source, dest)?;
+    
+    // Verify the copy was successful by checking file sizes
+    let source_metadata = fs::metadata(source)?;
+    let dest_metadata = fs::metadata(dest)?;
+    
+    if source_metadata.len() != dest_metadata.len() {
+        // Cleanup the incomplete copy
+        let _ = fs::remove_file(dest);
+        return Err("File copy verification failed: size mismatch".into());
+    }
+    
+    // Delete the original only after successful verification
+    fs::remove_file(source)?;
     
     Ok(())
 }
