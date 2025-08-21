@@ -443,8 +443,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "timekeeper-rs"
-version = "0.1.1"
+name = "timekeeper"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "clap",
