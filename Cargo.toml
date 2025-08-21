@@ -7,7 +7,8 @@ description = "A media file organizer that sorts files using EXIF metadata"
 
 [dependencies]
 chrono = { version = "0.4.41", features = ["serde"] }
-clap = { version = "4.5.45", features = ["derive"] }
+clap = { version = "4.5.45", features = ["derive", "cargo"] }
+ctrlc = "3.4.7"
 lazy_static = "1.5.0"
 rayon = "1.11.0"
 walkdir = "2.5.0"
@@ -19,8 +20,8 @@ bundled = []
 
 # Build optimization for smaller binaries
 [profile.release]
-opt-level = "z"     # Optimize for size
-lto = true          # Link-time optimization
-codegen-units = 1   # Better optimization
-panic = "abort"     # Smaller binary
-strip = true        # Remove debug symbols
+opt-level = 3          # Maximum optimization
+lto = true             # Link-time optimization
+codegen-units = 1      # Better optimization, slower compile
+panic = "abort"        # Smaller binary, faster execution
+strip = true           # Remove debug symbols
