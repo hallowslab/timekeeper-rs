@@ -22,6 +22,9 @@ lazy_static::lazy_static! {
         set.insert("nef");
         set.insert("arw");
         set.insert("dng");
+        set.insert("heic");
+        set.insert("webp");
+        set.insert("gif");
 
         // Video formats
         set.insert("mp4");
@@ -33,9 +36,6 @@ lazy_static::lazy_static! {
         set.insert("3gp");
         set.insert("webm");
 
-        // Other formats
-        set.insert("webp");
-        set.insert("gif");
 
         set
     };
