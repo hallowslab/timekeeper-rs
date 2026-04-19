@@ -8,6 +8,26 @@ use include_dir::{Dir, include_dir};
 #[cfg(all(windows, feature = "bundled"))]
 static EXIFTOOL_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/bin/windows");
 
+// Supress console window creation
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+// Helper for calling exiftool
+fn exiftool_command(path: &Path) -> std::process::Command {
+    let mut cmd = std::process::Command::new(path);
+
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+    cmd
+}
+
 // Error Type
 /// Typed error for ExifTool resolution failures.
 /// This replaces all `Box<dyn Error>` usage in the resolution layer.
@@ -90,9 +110,16 @@ pub fn get_exiftool_path(user_path: Option<PathBuf>) -> Result<PathBuf, ExifTool
 /// - stdout is non-empty (contains version string)
 /// Does NOT mutate state. Does NOT log.
 fn validate_exiftool(path: &Path) -> Result<(), ExifToolError> {
-    let output = Command::new(path).arg("-ver").output().map_err(|e| {
-        ExifToolError::ValidationFailed(format!("Failed to execute '{}': {}", path.display(), e))
-    })?;
+    let output = exiftool_command(path)
+        .arg("-ver")
+        .output()
+        .map_err(|e| {
+            ExifToolError::ValidationFailed(format!(
+                "Failed to execute '{}': {}",
+                path.display(),
+                e
+            ))
+        })?;
 
     if !output.status.success() {
         return Err(ExifToolError::ValidationFailed(format!(
@@ -301,23 +328,16 @@ pub fn extract_datetime(
     ];
 
     for field in &date_fields {
-        let output = Command::new(exiftool_path)
+        let output = exiftool_command(exiftool_path)
             .args(["-s", "-s", "-s", &format!("-{}", field)])
             .arg(file_path)
-            .output();
+            .output()?; // already handled errors
 
-        match output {
-            Ok(output) => {
-                let date_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !date_str.is_empty() {
-                    if let Ok(datetime) = parse_exif_date(&date_str) {
-                        return Ok(datetime);
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!("ExifTool command failed: {}", e);
-                continue;
+        let date_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+        if !date_str.is_empty() {
+            if let Ok(datetime) = parse_exif_date(&date_str) {
+                return Ok(datetime);
             }
         }
     }
